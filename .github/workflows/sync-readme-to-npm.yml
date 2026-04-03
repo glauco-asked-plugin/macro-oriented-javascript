@@ -1,0 +1,66 @@
+name: Sync README to npm
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "README.md"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-readme-to-npm
+  cancel-in-progress: false
+
+jobs:
+  release-readme:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Skip if version files were already changed in this push
+        id: version-files
+        shell: bash
+        run: |
+          CHANGED_FILES="$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}")"
+          if echo "$CHANGED_FILES" | grep -E '^(package\.json|package-lock\.json)$' >/dev/null; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure Git
+        if: steps.version-files.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump patch version
+        if: steps.version-files.outputs.skip != 'true'
+        run: npm version patch --no-git-tag-version
+
+      - name: Commit release metadata
+        if: steps.version-files.outputs.skip != 'true'
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          git add README.md package.json package-lock.json
+          git commit -m "docs: sync npm README for v$VERSION"
+          git tag "v$VERSION"
+
+      - name: Push commit and tag
+        if: steps.version-files.outputs.skip != 'true'
+        run: git push origin HEAD:main --follow-tags
