@@ -4,6 +4,8 @@ Compile-time macros for JavaScript.
 
 `@icaroglauco/dsljs` lets you define local DSLs inside a `.dsljs` file and expand them into plain JavaScript before runtime. The generated output is ordinary JavaScript with no additional runtime layer, which makes the tool useful for code generation, structural syntax experiments, and domain-specific authoring workflows.
 
+This package is designed for teams that want custom authoring syntax while keeping deployment artifacts plain JavaScript.
+
 ## Highlights
 
 - Compile custom syntax to standard JavaScript
